@@ -1,0 +1,9 @@
+[Desktop Entry]
+Name=Time Tracker
+Comment=Einfache Bildschirmzeit-Tracking-App mit Wochenansicht
+Exec=time-tracker-gnome
+Icon=time-tracker-gnome
+Type=Application
+Terminal=false
+Categories=Utility;GTK;GNOME;
+Keywords=time;tracker;screen;usage;

@@ -1,0 +1,6 @@
+#!/bin/bash
+set -e
+APPDIR="${APPDIR:-$(dirname "$(readlink -f "$0")")/../..}"
+export PYTHONPATH="${APPDIR}/usr/share/time-tracker-gnome:${PYTHONPATH}"
+export XDG_DATA_DIRS="${APPDIR}/usr/share:${XDG_DATA_DIRS}"
+exec python3 "${APPDIR}/usr/share/time-tracker-gnome/main.py" "$@"
