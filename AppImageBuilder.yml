@@ -12,8 +12,8 @@ AppDir:
     name: Time Tracker
     icon: time-tracker-gnome
     version: 1.0.0
-    exec: usr/bin/time-tracker-gnome
-    exec_args: $@
+    exec: usr/bin/python3
+    exec_args: $APPDIR/usr/share/time-tracker-gnome/main.py $@
 
   apt:
     arch: amd64
