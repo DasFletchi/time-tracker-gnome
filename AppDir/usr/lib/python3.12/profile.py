@@ -1,4 +1,4 @@
-#! /usr/bin/python3.12
+#!  usr/bin/python3.12
 #
 # Class for profiling python code. rev 1.0  6/2/94
 #

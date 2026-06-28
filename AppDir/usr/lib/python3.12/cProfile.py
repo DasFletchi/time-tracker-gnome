@@ -1,4 +1,4 @@
-#! /usr/bin/python3.12
+#!  usr/bin/python3.12
 
 """Python interface for the 'lsprof' profiler.
    Compatible with the 'profile' module.

@@ -1,4 +1,4 @@
-#! /usr/bin/python3.12
+#!  usr/bin/python3.12
 
 # NOTE: the above "/usr/local/bin/python" is NOT a mistake.  It is
 # intentionally NOT "/usr/bin/env python".  On many systems

@@ -1,4 +1,4 @@
-#! /usr/bin/python3.12
+#!  usr/bin/python3.12
 """Generate Python documentation in HTML or text for interactive use.
 
 At the Python interactive prompt, calling help(thing) on a Python object

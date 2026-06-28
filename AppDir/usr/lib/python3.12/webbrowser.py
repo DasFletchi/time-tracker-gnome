@@ -1,4 +1,4 @@
-#! /usr/bin/python3.12
+#!  usr/bin/python3.12
 """Interfaces for launching and remotely controlling web browsers."""
 # Maintained by Georg Brandl.
 

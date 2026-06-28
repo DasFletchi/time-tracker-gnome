@@ -1,4 +1,4 @@
-#! /usr/bin/python3.12
+#!  usr/bin/python3.12
 
 """Tool for measuring execution time of small code snippets.
 

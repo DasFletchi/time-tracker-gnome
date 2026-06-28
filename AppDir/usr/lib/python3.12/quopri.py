@@ -1,4 +1,4 @@
-#! /usr/bin/python3.12
+#!  usr/bin/python3.12
 
 """Conversions to/from quoted-printable transport encoding as per RFC 1521."""
 
