@@ -7,6 +7,9 @@ script:
 
 AppDir:
   path: ./AppDir
+  files:
+    exclude:
+      - opt/libc
   app_info:
     id: com.fletchi.TimeTrackerGnome
     name: Time Tracker
