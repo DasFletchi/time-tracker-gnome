@@ -7,80 +7,113 @@ sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
 import gi
 
-gi.require_version("Gtk", "3.0")
-gi.require_version("Gdk", "3.0")
-from gi.repository import Gtk, Gdk, GLib, Gio
+gi.require_version("Gtk", "4.0")
+gi.require_version("Adw", "1")
+from gi.repository import Gtk, Adw, GLib, Gio, Gdk
 
 from store import DataStore
 from tracker import TimeTracker
 
-
+# CSS stylesheet for OLED Black theme
 CSS = """
-.tt-window {
-    background-color: #fafafa;
-    font-family: "Cantarell", "Inter", "Sans";
+window, .background {
+    background-color: #000000;
 }
-.tt-header {
-    background-color: #ffffff;
-    border-bottom: 1px solid #e0e0e0;
-    padding: 18px 24px;
+.tt-window {
+    background-color: #000000;
+}
+headerbar {
+    background-color: #000000;
+    border-bottom: 1px solid #1c1c1c;
+    color: #ffffff;
+}
+clamp {
+    background-color: #000000;
+}
+scrolledwindow {
+    background-color: #000000;
+}
+viewport {
+    background-color: #000000;
+}
+.tt-header-box {
+    background-color: #000000;
+    padding: 24px;
+    border-bottom: 1px solid #1c1c1c;
 }
 .tt-header-title {
-    font-size: 22px;
+    font-size: 24px;
     font-weight: 800;
-    color: #1c1c1c;
+    color: #ffffff;
 }
 .tt-header-subtitle {
     font-size: 14px;
-    color: #5e5e5e;
+    color: #888888;
     margin-top: 4px;
 }
 .tt-session-time {
-    font-size: 32px;
-    font-weight: 700;
-    color: #1c71d8;
+    font-size: 38px;
+    font-weight: 800;
+    color: #3584e4;
     margin-top: 8px;
 }
 .tt-week-container {
-    background-color: #fafafa;
+    background-color: #000000;
     padding: 16px 24px;
 }
 .tt-day-row {
-    background-color: #ffffff;
+    background-color: #101010;
     border-radius: 12px;
-    padding: 14px 18px;
-    margin-bottom: 8px;
-    border: 1px solid #e6e6e6;
+    padding: 16px;
+    margin-bottom: 12px;
+    border: 1px solid #202020;
 }
 .tt-day-row.today {
-    border: 2px solid #1c71d8;
-    background-color: #f0f5ff;
+    border: 2px solid #3584e4;
+    background-color: #081220;
 }
 .tt-day-name {
-    font-size: 15px;
-    font-weight: 600;
-    color: #1c1c1c;
+    font-size: 16px;
+    font-weight: 700;
+    color: #ffffff;
 }
 .tt-day-date {
-    font-size: 12px;
-    color: #8c8c8c;
+    font-size: 13px;
+    color: #888888;
 }
 .tt-day-time {
     font-size: 16px;
     font-weight: 700;
-    color: #1c71d8;
+    color: #3584e4;
+}
+progressbar {
+    margin-top: 8px;
+}
+progressbar trough {
+    background-color: #202020;
+    border-radius: 6px;
+    min-height: 8px;
+}
+progressbar progress {
+    background-color: #3584e4;
+    border-radius: 6px;
+    min-height: 8px;
 }
 .tt-status {
-    font-size: 12px;
-    color: #8c8c8c;
-    padding: 4px 24px;
+    font-size: 13px;
+    color: #888888;
+    padding: 12px 24px;
 }
 .tt-quit-btn {
-    background-color: #e01b24;
+    background-color: #c01c28;
     color: #ffffff;
     border-radius: 8px;
-    padding: 6px 14px;
     font-weight: 600;
+    margin-right: 24px;
+    padding: 6px 16px;
+}
+.tt-quit-btn:hover {
+    background-color: #e01b24;
 }
 """
 
@@ -96,48 +129,51 @@ def format_duration(seconds: int) -> str:
     return f"{m}m {s:02d}s"
 
 
-class DayRow:
+class DayRow(Gtk.Box):
     def __init__(self):
-        self.box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL)
-        ctx = self.box.get_style_context()
-        ctx.add_class("tt-day-row")
+        super().__init__(orientation=Gtk.Orientation.VERTICAL)
+        self.add_css_class("tt-day-row")
 
+        # Top row (Horizontal)
         top = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL)
-        self.box.pack_start(top, False, False, 0)
+        self.append(top)
 
+        # Left column (Vertical)
         left = Gtk.Box(orientation=Gtk.Orientation.VERTICAL)
-        top.pack_start(left, True, True, 0)
+        left.set_hexpand(True)
+        top.append(left)
 
         self.name_label = Gtk.Label()
-        self.name_label.get_style_context().add_class("tt-day-name")
+        self.name_label.add_css_class("tt-day-name")
         self.name_label.set_halign(Gtk.Align.START)
-        left.pack_start(self.name_label, False, False, 0)
+        left.append(self.name_label)
 
         self.date_label = Gtk.Label()
-        self.date_label.get_style_context().add_class("tt-day-date")
+        self.date_label.add_css_class("tt-day-date")
         self.date_label.set_halign(Gtk.Align.START)
-        left.pack_start(self.date_label, False, False, 0)
+        left.append(self.date_label)
 
+        # Right column
         self.time_label = Gtk.Label()
-        self.time_label.get_style_context().add_class("tt-day-time")
+        self.time_label.add_css_class("tt-day-time")
         self.time_label.set_halign(Gtk.Align.END)
         self.time_label.set_valign(Gtk.Align.CENTER)
-        top.pack_start(self.time_label, False, False, 0)
+        top.append(self.time_label)
 
+        # Progress bar
         self.bar = Gtk.ProgressBar()
         self.bar.set_margin_top(8)
         self.bar.set_show_text(False)
-        self.box.pack_start(self.bar, False, False, 0)
+        self.append(self.bar)
 
     def update(self, day_data, max_seconds):
         d = day_data["date"]
-        ctx = self.box.get_style_context()
         if day_data["is_today"]:
-            if not ctx.has_class("today"):
-                ctx.add_class("today")
+            if not self.has_css_class("today"):
+                self.add_css_class("today")
         else:
-            if ctx.has_class("today"):
-                ctx.remove_class("today")
+            if self.has_css_class("today"):
+                self.remove_css_class("today")
 
         self.name_label.set_text(DAY_NAMES[d.weekday()])
         self.date_label.set_text(d.strftime("%d. %B"))
@@ -147,12 +183,13 @@ class DayRow:
         self.bar.set_fraction(min(fraction, 1.0))
 
 
-class TimeTrackerApp(Gtk.Application):
-    def __init__(self):
+class TimeTrackerApp(Adw.Application):
+    def __init__(self, is_background=False):
         super().__init__(
-            application_id="com.example.TimeTrackerGnome",
+            application_id="com.fletchi.TimeTrackerGnome",
             flags=Gio.ApplicationFlags.FLAGS_NONE,
         )
+        self.is_background = is_background
         self.store = DataStore()
         self.tracker = TimeTracker(self.store, on_tick=self.on_tracker_tick)
         self.window = None
@@ -160,6 +197,10 @@ class TimeTrackerApp(Gtk.Application):
         self.status_label = None
         self.day_rows = []
         self._week_data = []
+
+    def do_startup(self):
+        super().do_startup()
+        self.hold()  # Keeps application running when window is closed/hidden
 
     def do_activate(self):
         if self.window:
@@ -170,56 +211,75 @@ class TimeTrackerApp(Gtk.Application):
         self.window = self._build_window()
         self.add_window(self.window)
         self.tracker.start()
-        self.window.show_all()
+
+        # Setup autostart automatically
+        self.setup_autostart()
+
+        if not self.is_background:
+            self.window.present()
+        else:
+            print("Time Tracker gestartet im Hintergrund...")
+            # We reset this so subsequent user clicks on the application launcher will open the UI
+            self.is_background = False
 
     def _setup_css(self):
         provider = Gtk.CssProvider()
         provider.load_from_data(CSS.encode("utf-8"))
-        Gtk.StyleContext.add_provider_for_screen(
-            Gdk.Screen.get_default(),
+        Gtk.StyleContext.add_provider_for_display(
+            Gdk.Display.get_default(),
             provider,
             Gtk.STYLE_PROVIDER_PRIORITY_APPLICATION,
         )
 
+        # Force dark mode using Libadwaita StyleManager
+        style_manager = Adw.StyleManager.get_default()
+        style_manager.set_color_scheme(Adw.ColorScheme.FORCE_DARK)
+
     def _build_window(self):
-        win = Gtk.ApplicationWindow(application=self)
+        win = Adw.ApplicationWindow(application=self)
         win.set_title("Time Tracker")
-        win.set_default_size(420, 580)
-        win.set_icon_name("preferences-system-time")
-        win.get_style_context().add_class("tt-window")
-        win.connect("delete-event", self._on_delete_event)
+        win.set_default_size(420, 600)
+        win.connect("close-request", self._on_close_request)
+
+        toolbar_view = Adw.ToolbarView()
+        win.set_child(toolbar_view)
+
+        header_bar = Adw.HeaderBar()
+        toolbar_view.add_top_bar(header_bar)
 
         vbox = Gtk.Box(orientation=Gtk.Orientation.VERTICAL)
-        win.add(vbox)
-
-        # Header
-        header = Gtk.Box(orientation=Gtk.Orientation.VERTICAL)
-        header.get_style_context().add_class("tt-header")
-        vbox.pack_start(header, False, False, 0)
-
-        title = Gtk.Label(label="Time Tracker")
-        title.get_style_context().add_class("tt-header-title")
-        title.set_halign(Gtk.Align.START)
-        header.pack_start(title, False, False, 0)
-
-        subtitle = Gtk.Label(label="Wochenübersicht")
-        subtitle.get_style_context().add_class("tt-header-subtitle")
-        subtitle.set_halign(Gtk.Align.START)
-        header.pack_start(subtitle, False, False, 0)
-
-        self.session_label = Gtk.Label(label="0m 00s")
-        self.session_label.get_style_context().add_class("tt-session-time")
-        self.session_label.set_halign(Gtk.Align.START)
-        header.pack_start(self.session_label, False, False, 0)
-
-        # Scrollable week list
         scroll = Gtk.ScrolledWindow()
         scroll.set_policy(Gtk.PolicyType.NEVER, Gtk.PolicyType.AUTOMATIC)
-        vbox.pack_start(scroll, True, True, 0)
+        scroll.set_child(vbox)
 
+        clamp = Adw.Clamp()
+        clamp.set_child(scroll)
+        toolbar_view.set_content(clamp)
+
+        # Header card (Session Tracker)
+        header_box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL)
+        header_box.add_css_class("tt-header-box")
+        vbox.append(header_box)
+
+        title = Gtk.Label(label="Time Tracker")
+        title.add_css_class("tt-header-title")
+        title.set_halign(Gtk.Align.START)
+        header_box.append(title)
+
+        subtitle = Gtk.Label(label="Wochenübersicht")
+        subtitle.add_css_class("tt-header-subtitle")
+        subtitle.set_halign(Gtk.Align.START)
+        header_box.append(subtitle)
+
+        self.session_label = Gtk.Label(label="0m 00s")
+        self.session_label.add_css_class("tt-session-time")
+        self.session_label.set_halign(Gtk.Align.START)
+        header_box.append(self.session_label)
+
+        # Week container
         week_container = Gtk.Box(orientation=Gtk.Orientation.VERTICAL)
-        week_container.get_style_context().add_class("tt-week-container")
-        scroll.add(week_container)
+        week_container.add_css_class("tt-week-container")
+        vbox.append(week_container)
 
         self._week_data = self.store.get_week_data()
         max_seconds = max((d["seconds"] for d in self._week_data), default=1) or 1
@@ -227,30 +287,33 @@ class TimeTrackerApp(Gtk.Application):
         for day in self._week_data:
             row = DayRow()
             row.update(day, max_seconds)
-            week_container.pack_start(row.box, False, False, 0)
+            week_container.append(row)
             self.day_rows.append(row)
 
         # Bottom bar
         bottom = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL)
-        bottom.set_margin_bottom(8)
-        bottom.set_margin_top(4)
-        vbox.pack_start(bottom, False, False, 0)
+        bottom.set_margin_bottom(12)
+        bottom.set_margin_top(8)
+        vbox.append(bottom)
 
         self.status_label = Gtk.Label(label="Tracking aktiv")
-        self.status_label.get_style_context().add_class("tt-status")
+        self.status_label.add_css_class("tt-status")
         self.status_label.set_halign(Gtk.Align.START)
-        bottom.pack_start(self.status_label, True, True, 0)
+        bottom.append(self.status_label)
+
+        spacer = Gtk.Box()
+        spacer.set_hexpand(True)
+        bottom.append(spacer)
 
         quit_btn = Gtk.Button(label="Beenden")
-        quit_btn.get_style_context().add_class("tt-quit-btn")
-        quit_btn.set_margin_right(24)
+        quit_btn.add_css_class("tt-quit-btn")
         quit_btn.connect("clicked", self._on_quit)
-        bottom.pack_end(quit_btn, False, False, 0)
+        bottom.append(quit_btn)
 
         return win
 
-    def _on_delete_event(self, widget, event):
-        # Hide window instead of destroying it so tracking keeps running
+    def _on_close_request(self, widget):
+        # Hide window instead of destroying it so tracking keeps running in background
         self.window.hide()
         return True
 
@@ -261,6 +324,9 @@ class TimeTrackerApp(Gtk.Application):
         GLib.idle_add(self._update_ui)
 
     def _update_ui(self):
+        if not self.session_label or not self.status_label:
+            return False
+
         self.session_label.set_text(format_duration(int(self.tracker.session_seconds)))
 
         if self.tracker.is_afk:
@@ -268,7 +334,7 @@ class TimeTrackerApp(Gtk.Application):
         else:
             self.status_label.set_text("Tracking aktiv")
 
-        # Refresh week view every ~30s to avoid constant churn
+        # Refresh week view every ~30s
         secs = int(self.tracker.session_seconds)
         if secs % 30 == 0:
             self._week_data = self.store.get_week_data()
@@ -278,6 +344,37 @@ class TimeTrackerApp(Gtk.Application):
 
         return False
 
+    def setup_autostart(self):
+        appimage_path = os.environ.get("APPIMAGE")
+        if not appimage_path:
+            # Fallback to dev run.sh path if running locally
+            fallback = os.path.abspath(os.path.join(os.path.dirname(__file__), "run.sh"))
+            if os.path.exists(fallback):
+                appimage_path = fallback
+            else:
+                return
+
+        autostart_dir = os.path.expanduser("~/.config/autostart")
+        os.makedirs(autostart_dir, exist_ok=True)
+        desktop_file = os.path.join(autostart_dir, "time-tracker-gnome.desktop")
+
+        content = f"""[Desktop Entry]
+Name=Time Tracker
+Comment=Bildschirmzeit-Tracking-App
+Exec="{appimage_path}" --background
+Icon=preferences-system-time
+Type=Application
+Terminal=false
+X-GNOME-Autostart-enabled=true
+"""
+        try:
+            with open(desktop_file, "w", encoding="utf-8") as f:
+                f.write(content)
+            os.chmod(desktop_file, 0o755)
+            print(f"Autostart-Datei eingerichtet in {desktop_file}")
+        except Exception as e:
+            print(f"Fehler beim Einrichten von Autostart: {e}")
+
     def do_shutdown(self):
         self.tracker.stop()
         self.tracker.join(timeout=2)
@@ -286,7 +383,13 @@ class TimeTrackerApp(Gtk.Application):
 
 def main():
     signal.signal(signal.SIGINT, signal.SIG_DFL)
-    app = TimeTrackerApp()
+    
+    is_background = False
+    if "--background" in sys.argv:
+        is_background = True
+        sys.argv.remove("--background")
+
+    app = TimeTrackerApp(is_background=is_background)
 
     def _on_sigterm(signum, frame):
         app.quit()
