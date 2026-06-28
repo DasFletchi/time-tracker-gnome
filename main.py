@@ -197,10 +197,11 @@ class TimeTrackerApp(Adw.Application):
         self.status_label = None
         self.day_rows = []
         self._week_data = []
+        self._last_week_refresh = 0
 
     def do_startup(self):
-        super().do_startup()
-        self.hold()  # Keeps application running when window is closed/hidden
+        Adw.Application.do_startup(self)
+        self.hold()
 
     def do_activate(self):
         if self.window:
@@ -242,19 +243,24 @@ class TimeTrackerApp(Adw.Application):
         win.connect("close-request", self._on_close_request)
 
         toolbar_view = Adw.ToolbarView()
-        win.set_child(toolbar_view)
+        win.set_content(toolbar_view)
 
         header_bar = Adw.HeaderBar()
         toolbar_view.add_top_bar(header_bar)
 
-        vbox = Gtk.Box(orientation=Gtk.Orientation.VERTICAL)
+        content_box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL)
+        toolbar_view.set_content(content_box)
+
         scroll = Gtk.ScrolledWindow()
         scroll.set_policy(Gtk.PolicyType.NEVER, Gtk.PolicyType.AUTOMATIC)
-        scroll.set_child(vbox)
+        scroll.set_vexpand(True)
+        content_box.append(scroll)
 
         clamp = Adw.Clamp()
-        clamp.set_child(scroll)
-        toolbar_view.set_content(clamp)
+        scroll.set_child(clamp)
+
+        vbox = Gtk.Box(orientation=Gtk.Orientation.VERTICAL)
+        clamp.set_child(vbox)
 
         # Header card (Session Tracker)
         header_box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL)
@@ -290,11 +296,11 @@ class TimeTrackerApp(Adw.Application):
             week_container.append(row)
             self.day_rows.append(row)
 
-        # Bottom bar
+        # Bottom bar (outside scroll area)
         bottom = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL)
         bottom.set_margin_bottom(12)
         bottom.set_margin_top(8)
-        vbox.append(bottom)
+        content_box.append(bottom)
 
         self.status_label = Gtk.Label(label="Tracking aktiv")
         self.status_label.add_css_class("tt-status")
@@ -335,8 +341,9 @@ class TimeTrackerApp(Adw.Application):
             self.status_label.set_text("Tracking aktiv")
 
         # Refresh week view every ~30s
-        secs = int(self.tracker.session_seconds)
-        if secs % 30 == 0:
+        now = int(self.tracker.session_seconds)
+        if now - self._last_week_refresh >= 30:
+            self._last_week_refresh = now
             self._week_data = self.store.get_week_data()
             max_seconds = max((d["seconds"] for d in self._week_data), default=1) or 1
             for row, day in zip(self.day_rows, self._week_data):
@@ -378,7 +385,7 @@ X-GNOME-Autostart-enabled=true
     def do_shutdown(self):
         self.tracker.stop()
         self.tracker.join(timeout=2)
-        super().do_shutdown()
+        Adw.Application.do_shutdown(self)
 
 
 def main():
