@@ -1,0 +1,12 @@
+# Build artifacts
+squashfs-root/
+appimage-build/
+AppDir/usr/share/time-tracker-gnome/
+*.zsync
+
+# Python cache
+__pycache__/
+*.pyc
+
+# Local
+build/
