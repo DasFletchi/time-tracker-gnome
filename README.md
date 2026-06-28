@@ -1,28 +1,50 @@
 # Time Tracker GNOME
 
-Eine einfache, im Hintergrund laufende Bildschirmzeit-Tracking-App im GNOME-Stil.
+A simple, background-running screen time tracking app in GNOME style.
 
 ## Features
 
-- **Wochenansicht** – Übersicht über die tägliche Bildschirmzeit der aktuellen Woche
-- **AFK-Modus** – Zeit wird nicht gezählt, wenn Maus/Tastatur 2 Minuten lang nicht benutzt werden (über GNOME IdleMonitor D-Bus)
-- **Suspend-sicher** – System-Sleep-Zeit wird nicht als aktive Zeit gezählt
-- **Im Hintergrund laufen** – Das Fenster lässt sich schließen, das Tracking läuft weiter
-- **Autostart** – optional bei GNOME-Login automatisch starten
+- **Week Overview** – Daily screen time for the current week with progress bars
+- **AFK Mode** – Time is not counted when mouse/keyboard are idle for 2 minutes (uses GNOME IdleMonitor D-Bus)
+- **Suspend Safe** – System sleep time is not counted as active time
+- **Runs in Background** – Close the window, tracking keeps running
+- **Autostart** – Automatically registers itself on first launch
 
-## Starten
+## Quick Start
+
+### AppImage (recommended)
+
+Download the latest AppImage from the [Releases](https://github.com/DasFletchi/time-tracker-gnome/releases) page:
 
 ```bash
+chmod +x "Time Tracker-1.0.0-x86_64.AppImage"
+./"Time Tracker-1.0.0-x86_64.AppImage"
+```
+
+Autostart is set up automatically on first run.
+
+### Run from source
+
+```bash
+git clone https://github.com/DasFletchi/time-tracker-gnome.git
 cd time-tracker-gnome
 ./run.sh
 ```
 
-## Autostart einrichten
+### Build AppImage yourself
 
 ```bash
-./install-autostart.sh
+pip install appimage-builder
+export APPDIR=./AppDir
+appimage-builder --recipe AppImageBuilder.yml
 ```
 
-## Daten
+## Data
 
-Die Zeiten werden in `~/.local/share/time-tracker-gnome/data.json` gespeichert.
+Tracking data is stored in `~/.local/share/time-tracker-gnome/data.json`.
+
+## Requirements
+
+- GNOME 42+ (or any libadwaita-compatible desktop)
+- Python 3 + PyGObject
+- GTK 4 + libadwaita
