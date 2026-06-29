@@ -1,8 +1,9 @@
 [Desktop Entry]
 Name=Time Tracker
-Comment=Einfache Bildschirmzeit-Tracking-App mit Wochenansicht
-Exec=/home/fletchi/time-tracker-gnome/run.sh
-Icon=preferences-system-time
+Comment=Time Tracker - Bildschirmzeit-Tracking-App
+Exec=time-tracker-gnome
+Icon=time-tracker-gnome
 Type=Application
 Terminal=false
-Categories=Utility;
+Categories=Utility;GTK;GNOME;
+Keywords=time;tracker;screen;usage;

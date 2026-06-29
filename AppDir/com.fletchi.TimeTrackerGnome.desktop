@@ -1,11 +1,11 @@
 [Desktop Entry]
 X-AppImage-Arch=x86_64
-X-AppImage-Version=1.0.0
+X-AppImage-Version=1.0.1
 X-AppImage-Name=Time Tracker
 Name=Time Tracker
-Exec=usr/bin/python3
+Exec=time-tracker-gnome
 Icon=time-tracker-gnome
 Type=Application
 Terminal=false
 Categories=Utility;
-Comment=
+Comment=Time Tracker - Bildschirmzeit-Tracking-App

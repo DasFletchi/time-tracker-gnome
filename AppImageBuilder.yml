@@ -1,6 +1,6 @@
 version: 1
 script:
-  - rm -rf AppDir/usr/share/time-tracker-gnome | true
+  - rm -rf AppDir/usr/share/time-tracker-gnome || true
   - mkdir -p AppDir/usr/share/time-tracker-gnome
   - cp main.py tracker.py store.py AppDir/usr/share/time-tracker-gnome/
   - chmod +x AppDir/usr/bin/time-tracker-gnome
@@ -8,15 +8,20 @@ script:
 AppDir:
   path: ./AppDir
   files:
+    include: []
     exclude:
-      - opt/libc
+      - usr/share/doc/**
+      - usr/share/man/**
+      - usr/share/info/**
+      - usr/share/lintian/**
+      - usr/share/locale/**
   app_info:
     id: com.fletchi.TimeTrackerGnome
     name: Time Tracker
     icon: time-tracker-gnome
-    version: 1.0.0
-    exec: usr/bin/python3
-    exec_args: $APPDIR/usr/share/time-tracker-gnome/main.py $@
+    version: 1.0.1
+    exec: usr/bin/time-tracker-gnome
+    exec_args: $@
 
   apt:
     arch: amd64
@@ -44,12 +49,15 @@ AppDir:
 
   runtime:
     env:
+      PATH: "$APPDIR/usr/bin:$APPDIR/usr/sbin:$APPDIR/bin:$APPDIR/sbin:$PATH"
       APPDIR: "$APPDIR"
-      LD_LIBRARY_PATH: "$APPDIR/usr/lib/x86_64-linux-gnu:$APPDIR/lib/x86_64-linux-gnu"
+      LD_LIBRARY_PATH: "$APPDIR/usr/lib/x86_64-linux-gnu:$APPDIR/lib/x86_64-linux-gnu:$APPDIR/usr/lib:$APPDIR/lib"
       GI_TYPELIB_PATH: "$APPDIR/usr/lib/x86_64-linux-gnu/girepository-1.0"
-      XDG_DATA_DIRS: "$APPDIR/usr/share"
+      XDG_DATA_DIRS: "$APPDIR/usr/share:$XDG_DATA_DIRS"
       PYTHONHOME: "$APPDIR/usr"
       PYTHONPATH: "$APPDIR/usr/lib/python3/dist-packages:$APPDIR/usr/share/time-tracker-gnome"
+      GSETTINGS_SCHEMA_DIR: "$APPDIR/usr/share/glib-2.0/schemas"
+      GDK_PIXBUF_MODULE_FILE: "$APPDIR/usr/lib/x86_64-linux-gnu/gdk-pixbuf-2.0/2.10.0/loaders.cache"
 
 AppImage:
   arch: x86_64

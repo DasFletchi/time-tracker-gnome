@@ -2,7 +2,10 @@
 squashfs-root/
 appimage-build/
 AppDir/usr/share/time-tracker-gnome/
+AppDir/.bundle.yml
+AppDir/AppRun.env
 *.zsync
+*.AppImage
 
 # Python cache
 __pycache__/
