@@ -17,8 +17,8 @@ A simple, background-running screen time tracking app in GNOME style.
 Download the latest AppImage from the [Releases](https://github.com/DasFletchi/time-tracker-gnome/releases) page:
 
 ```bash
-chmod +x "Time Tracker-1.0.0-x86_64.AppImage"
-./"Time Tracker-1.0.0-x86_64.AppImage"
+chmod +x "Time Tracker-1.0.1-x86_64.AppImage"
+./"Time Tracker-1.0.1-x86_64.AppImage"
 ```
 
 Autostart is set up automatically on first run.
