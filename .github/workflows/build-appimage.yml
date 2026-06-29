@@ -1,0 +1,39 @@
+name: Build AppImage
+
+on:
+  push:
+    branches: [main]
+    tags: ["v*"]
+  release:
+    types: [published]
+
+jobs:
+  build:
+    runs-on: ubuntu-24.04
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install system deps
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq fakeroot python3-pip desktop-file-utils
+          pip install appimage-builder
+
+      - name: Build AppImage
+        run: |
+          appimage-builder --recipe AppImageBuilder.yml --skip-tests
+
+      - name: Upload to Release
+        if: startsWith(github.ref, 'refs/tags/')
+        uses: softprops/action-gh-release@v2
+        with:
+          files: ./*.AppImage
+
+      - name: Upload as Artifact
+        if: "!startsWith(github.ref, 'refs/tags/')"
+        uses: actions/upload-artifact@v4
+        with:
+          name: Time-Tracker-AppImage
+          path: ./*.AppImage
