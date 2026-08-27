@@ -65,12 +65,14 @@ Für eine Quellcode-Installation kann der Autostart auch manuell eingerichtet we
 
 ## AppImage bauen
 
-Zum Erstellen eines neuen AppImage werden die aktualisierten Python-Dateien während des Builds in das AppDir kopiert.
+Zum Erstellen eines neuen AppImage wird das mit dem Projekt gelieferte `appimagetool` verwendet. Es verarbeitet den vorhandenen `AppRun`-Starter direkt und vermeidet damit den inkompatiblen `appimage-builder`-Pfad.
 
 ```bash
-pip install appimage-builder
-export APPDIR=./AppDir
-appimage-builder --recipe AppImageBuilder.yml
+rm -rf AppDir/usr/share/time-tracker-gnome
+mkdir -p AppDir/usr/share/time-tracker-gnome
+cp main.py store.py tracker.py AppDir/usr/share/time-tracker-gnome/
+chmod +x AppDir/AppRun AppDir/usr/bin/time-tracker-gnome
+ARCH=x86_64 ./appimagetool AppDir "Time-Tracker-1.1.1-x86_64.AppImage"
 ```
 
 ## Entwicklung und Tests

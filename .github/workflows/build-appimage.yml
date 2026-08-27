@@ -4,36 +4,66 @@ on:
   push:
     branches: [main]
     tags: ["v*"]
-  release:
-    types: [published]
+  workflow_dispatch:
+
+permissions:
+  contents: write
 
 jobs:
   build:
+    name: Build AppImage
     runs-on: ubuntu-24.04
 
     steps:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Install system deps
+      - name: Install packaging tools
         run: |
+          set -Eeuo pipefail
           sudo apt-get update -qq
-          sudo apt-get install -y -qq fakeroot python3-pip desktop-file-utils
-          pip install appimage-builder
+          sudo apt-get install -y -qq desktop-file-utils squashfs-tools
+
+      - name: Verify source files
+        run: |
+          set -Eeuo pipefail
+          python3 -m unittest discover -s tests -v
+          python3 -m py_compile main.py store.py tracker.py
+          desktop-file-validate TimeTrackerGnome.desktop
+          desktop-file-validate AppDir/com.fletchi.TimeTrackerGnome.desktop
 
       - name: Build AppImage
+        id: package
         run: |
-          appimage-builder --recipe AppImageBuilder.yml --skip-tests
+          set -Eeuo pipefail
+          test -x ./appimagetool
+          rm -rf AppDir/usr/share/time-tracker-gnome
+          mkdir -p AppDir/usr/share/time-tracker-gnome
+          cp main.py store.py tracker.py AppDir/usr/share/time-tracker-gnome/
+          chmod +x AppDir/AppRun AppDir/usr/bin/time-tracker-gnome
 
-      - name: Upload to Release
-        if: startsWith(github.ref, 'refs/tags/')
+          if [[ "${GITHUB_REF_TYPE}" == "tag" ]]; then
+            VERSION="${GITHUB_REF_NAME#v}"
+          else
+            VERSION="dev-${GITHUB_SHA::7}"
+          fi
+
+          APPIMAGE="Time-Tracker-${VERSION}-x86_64.AppImage"
+          ARCH=x86_64 ./appimagetool AppDir "$APPIMAGE"
+          test -s "$APPIMAGE"
+          echo "appimage=$APPIMAGE" >> "$GITHUB_OUTPUT"
+
+      - name: Upload release asset
+        if: github.ref_type == 'tag'
         uses: softprops/action-gh-release@v2
         with:
-          files: ./*.AppImage
+          generate_release_notes: true
+          files: ${{ steps.package.outputs.appimage }}
 
-      - name: Upload as Artifact
-        if: "!startsWith(github.ref, 'refs/tags/')"
+      - name: Upload workflow artifact
+        if: github.ref_type != 'tag'
         uses: actions/upload-artifact@v4
         with:
-          name: Time-Tracker-AppImage
-          path: ./*.AppImage
+          name: Time-Tracker-AppImage-${{ github.sha }}
+          path: ${{ steps.package.outputs.appimage }}
+          if-no-files-found: error
