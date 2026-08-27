@@ -11,6 +11,7 @@ Exec="$SCRIPT_DIR/run.sh" --background
 Icon=preferences-system-time
 Type=Application
 Terminal=false
+NoDisplay=true
 X-GNOME-Autostart-enabled=true
 EOF
 

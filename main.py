@@ -378,6 +378,7 @@ Exec="{appimage_path}" --background
 Icon=preferences-system-time
 Type=Application
 Terminal=false
+NoDisplay=true
 X-GNOME-Autostart-enabled=true
 """
         try:

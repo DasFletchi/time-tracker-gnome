@@ -1,6 +1,6 @@
 [Desktop Entry]
 X-AppImage-Arch=x86_64
-X-AppImage-Version=1.0.1
+X-AppImage-Version=1.1.1
 X-AppImage-Name=Time Tracker
 Name=Time Tracker
 Exec=time-tracker-gnome

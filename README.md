@@ -1,6 +1,6 @@
 # Time Tracker GNOME
 
-**Time Tracker GNOME** erfasst die aktive Bildschirmzeit und zeigt die aktuelle Woche in einer schlanken GNOME-Oberfläche an. Die Version **1.1.0** trennt die Zeitmessung vollständig vom Anwendungsfenster: Das Schließen des Fensters blendet nur die Oberfläche aus; das Tracking bleibt aktiv, bis die Anwendung bewusst über **Beenden** oder durch das Betriebssystem beendet wird.
+**Time Tracker GNOME** erfasst die aktive Bildschirmzeit und zeigt die aktuelle Woche in einer schlanken GNOME-Oberfläche an. Die Version **1.1.1** trennt die Zeitmessung vollständig vom Anwendungsfenster: Das Schließen des Fensters blendet nur die Oberfläche aus; das Tracking bleibt aktiv, bis die Anwendung bewusst über **Beenden** oder durch das Betriebssystem beendet wird.
 
 | Funktion | Verhalten |
 |---|---|
@@ -15,8 +15,8 @@
 Die aktuelle AppImage-Version kann über die [Releases](https://github.com/DasFletchi/time-tracker-gnome/releases) bezogen werden. Nach dem Herunterladen wird sie ausführbar gemacht und normal gestartet.
 
 ```bash
-chmod +x "Time Tracker-1.1.0-x86_64.AppImage"
-./"Time Tracker-1.1.0-x86_64.AppImage"
+chmod +x "Time Tracker-1.1.1-x86_64.AppImage"
+./"Time Tracker-1.1.1-x86_64.AppImage"
 ```
 
 Für die Ausführung aus dem Quellcode werden Python 3, PyGObject, GTK 4 und libadwaita benötigt. Das Startskript reicht zusätzliche Argumente unverändert weiter; daher kann der Hintergrundmodus zum Testen explizit gestartet werden.
@@ -53,7 +53,7 @@ Eine kopierbare Vorlage liegt als [`data.example.json`](./data.example.json) im 
 
 ## Hintergrundbetrieb und Autostart
 
-Der Autostart wird beim ersten Programmstart automatisch angelegt und verwendet den Parameter `--background`. In diesem Modus beginnt die Erfassung direkt beim Start, ohne ein Fenster zu erzeugen. Wird anschließend das Programmsymbol ausgewählt, öffnet dieselbe laufende Instanz die Oberfläche.
+Der Autostart wird beim ersten Programmstart automatisch angelegt und verwendet den Parameter `--background`. Er ist mit `NoDisplay=true` als reiner Hintergrunddienst markiert und erscheint deshalb nicht als irreführender zweiter Eintrag im Pop!_OS- beziehungsweise GNOME-App-Menü. In diesem Modus beginnt die Erfassung direkt beim Start, ohne ein Fenster zu erzeugen. Wird anschließend der reguläre Eintrag **Time Tracker** im App-Menü ausgewählt, öffnet dieselbe laufende Instanz die Oberfläche.
 
 Das Schließen über das Fenstersymbol **beendet die Anwendung nicht**. Es versteckt ausschließlich das Fenster. Nur der rote Knopf **Beenden**, ein Abmelden/Herunterfahren oder ein bewusstes Beenden des Prozesses stoppt die Messung.
 
