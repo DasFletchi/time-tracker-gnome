@@ -213,6 +213,7 @@ class TimeTrackerApp(Adw.Application):
 
     def do_activate(self):
         if self.window:
+            self._update_ui()
             self.window.present()
             return
 
@@ -226,6 +227,7 @@ class TimeTrackerApp(Adw.Application):
         self._setup_css()
         self.window = self._build_window()
         self.add_window(self.window)
+        self._update_ui()
         self.window.present()
 
     def _setup_css(self):
@@ -333,7 +335,10 @@ class TimeTrackerApp(Adw.Application):
         self.quit()
 
     def on_tracker_tick(self):
-        GLib.idle_add(self._update_ui)
+        # Background tracking must not wake the GTK main loop solely for a
+        # hidden window. The current values are refreshed when it is reopened.
+        if self.window and self.window.get_visible():
+            GLib.idle_add(self._update_ui)
 
     def _update_ui(self):
         if not self.session_label or not self.status_label:

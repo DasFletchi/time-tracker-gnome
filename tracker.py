@@ -1,38 +1,60 @@
 import threading
 import time
-import subprocess
 from datetime import date
+
+try:
+    import gi
+
+    gi.require_version("Gio", "2.0")
+    from gi.repository import Gio, GLib
+except (ImportError, ValueError):
+    # The packaged application includes PyGObject. Keeping this optional makes
+    # the non-graphical storage tests usable on minimal development systems.
+    Gio = None
+    GLib = None
+
 from store import DataStore
 
 
 AFK_THRESHOLD_MS = 120_000  # 2 minutes
-TICK_SECONDS = 1
-MAX_ELAPSED_PER_TICK = 5  # cap to handle suspend/resume gracefully
+TICK_SECONDS = 5
+MAX_ELAPSED_PER_TICK = 15  # cap to handle suspend/resume gracefully
 SAVE_INTERVAL_SECONDS = 60  # reduce disk writes while limiting data loss on crashes
+IDLE_MONITOR_BUS_NAME = "org.gnome.Mutter.IdleMonitor"
+IDLE_MONITOR_OBJECT_PATH = "/org/gnome/Mutter/IdleMonitor/Core"
+IDLE_MONITOR_INTERFACE = "org.gnome.Mutter.IdleMonitor"
+
+_idle_monitor_connection = None
 
 
 def get_idle_time_ms() -> int:
+    """Liest die GNOME-Leerlaufzeit ohne für jede Abfrage einen Prozess zu starten."""
+    global _idle_monitor_connection
+
+    if Gio is None or GLib is None:
+        return 0
+
     try:
-        result = subprocess.run(
-            [
-                "dbus-send",
-                "--print-reply",
-                "--dest=org.gnome.Mutter.IdleMonitor",
-                "/org/gnome/Mutter/IdleMonitor/Core",
-                "org.gnome.Mutter.IdleMonitor.GetIdletime",
-            ],
-            capture_output=True,
-            text=True,
-            timeout=2,
+        if _idle_monitor_connection is None:
+            _idle_monitor_connection = Gio.bus_get_sync(Gio.BusType.SESSION, None)
+
+        result = _idle_monitor_connection.call_sync(
+            IDLE_MONITOR_BUS_NAME,
+            IDLE_MONITOR_OBJECT_PATH,
+            IDLE_MONITOR_INTERFACE,
+            "GetIdletime",
+            None,
+            GLib.VariantType.new("(t)"),
+            Gio.DBusCallFlags.NONE,
+            2_000,
+            None,
         )
-        if result.returncode == 0:
-            parts = result.stdout.strip().split()
-            for i, part in enumerate(parts):
-                if part == "uint64":
-                    return int(parts[i + 1])
+        return int(result.unpack()[0])
     except Exception:
-        pass
-    return 0
+        # Reconnect after a session-bus or Mutter restart. Returning zero keeps
+        # the tracker functional on desktops without the GNOME idle monitor.
+        _idle_monitor_connection = None
+        return 0
 
 
 class TimeTracker(threading.Thread):
@@ -75,7 +97,7 @@ class TimeTracker(threading.Thread):
 
             if not self.is_afk:
                 self.session_seconds += elapsed
-                self.store.add_seconds(self.today_key, int(elapsed))
+                self.store.add_seconds(self.today_key, max(1, round(elapsed)))
 
             self._save_if_due(now)
 

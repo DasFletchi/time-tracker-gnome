@@ -2,8 +2,12 @@ import json
 import os
 import tempfile
 import threading
+import time
 from datetime import date, timedelta
 from typing import Dict, Optional, Tuple
+
+
+EXTERNAL_EDIT_CHECK_SECONDS = 60
 
 
 class DataStore:
@@ -26,6 +30,7 @@ class DataStore:
         loaded_data = self._read_file()
         self.data: Dict[str, int] = loaded_data if loaded_data is not None else {}
         self._file_signature = self._get_file_signature()
+        self._last_external_check = time.monotonic()
         self._pending_seconds: Dict[str, int] = {}
 
     def _get_file_signature(self) -> Optional[Tuple[int, int]]:
@@ -66,13 +71,19 @@ class DataStore:
             # last valid in-memory values.
             return None
 
-    def _reload_if_changed_locked(self) -> None:
+    def _reload_if_changed_locked(self, force: bool = False) -> None:
         """Übernimmt eine von außen gespeicherte, gültige JSON-Datei.
 
-        Noch nicht gespeicherte Tracking-Sekunden werden danach wieder ergänzt,
-        damit eine manuelle Änderung und das laufende Tracking zusammengeführt
-        werden und keines von beiden verloren geht.
+        Die Dateimetadaten werden im Normalbetrieb nur einmal pro Minute geprüft.
+        Vor einem eigenen Schreibvorgang wird die Prüfung immer erzwungen, damit
+        manuelle Änderungen keinesfalls überschrieben werden. Noch nicht
+        gespeicherte Tracking-Sekunden werden anschließend wieder ergänzt.
         """
+        now = time.monotonic()
+        if not force and now - self._last_external_check < EXTERNAL_EDIT_CHECK_SECONDS:
+            return
+
+        self._last_external_check = now
         current_signature = self._get_file_signature()
         if current_signature != self._file_signature:
             external_data = self._read_file()
@@ -102,6 +113,7 @@ class DataStore:
 
             os.replace(temp_path, self.path)
             self._file_signature = self._get_file_signature()
+            self._last_external_check = time.monotonic()
             return True
         except OSError:
             if temp_path:
@@ -126,7 +138,7 @@ class DataStore:
     def save(self) -> bool:
         """Speichert alle gepufferten Sekunden und gibt den Erfolg zurück."""
         with self._lock:
-            self._reload_if_changed_locked()
+            self._reload_if_changed_locked(force=True)
             if not self._pending_seconds:
                 return True
             if self._save_locked():

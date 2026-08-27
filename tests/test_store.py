@@ -2,12 +2,15 @@ import json
 import os
 import sys
 import tempfile
+import time
 import unittest
+from unittest import mock
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from store import DataStore
-from tracker import TimeTracker
+import tracker as tracker_module
+from tracker import SAVE_INTERVAL_SECONDS, TICK_SECONDS, TimeTracker
 
 
 class DataStoreTests(unittest.TestCase):
@@ -33,6 +36,20 @@ class DataStoreTests(unittest.TestCase):
         self.assertEqual(self.read_json(), {"2026-08-27": 90})
         with open(self.path, "r", encoding="utf-8") as data_file:
             self.assertTrue(data_file.read().endswith("\n"))
+
+    def test_file_check_is_throttled_between_saves(self):
+        self.store.add_seconds("2026-08-27", 60)
+        self.store._last_external_check = time.monotonic()
+
+        with mock.patch.object(
+            self.store,
+            "_get_file_signature",
+            wraps=self.store._get_file_signature,
+        ) as signature_check:
+            self.store.add_seconds("2026-08-27", 5)
+
+        self.assertEqual(signature_check.call_count, 0)
+        self.assertEqual(self.store.get_seconds("2026-08-27"), 65)
 
     def test_external_manual_edit_is_preserved_before_next_save(self):
         self.store.add_seconds("2026-08-27", 60)
@@ -87,6 +104,51 @@ class DataStoreTests(unittest.TestCase):
         self.assertEqual(reloaded_store.get_seconds("not-a-date"), 0)
 
 
+class IdleMonitorTests(unittest.TestCase):
+    def setUp(self):
+        tracker_module._idle_monitor_connection = None
+        self.gio = mock.Mock()
+        self.gio.BusType.SESSION = object()
+        self.gio.DBusCallFlags.NONE = object()
+        self.glib = mock.Mock()
+        self.glib.VariantType.new.return_value = object()
+
+    def tearDown(self):
+        tracker_module._idle_monitor_connection = None
+
+    def test_idle_monitor_connection_is_reused(self):
+        connection = mock.Mock()
+        reply = mock.Mock()
+        reply.unpack.return_value = (12_345,)
+        connection.call_sync.return_value = reply
+        self.gio.bus_get_sync.return_value = connection
+
+        with mock.patch.object(tracker_module, "Gio", self.gio), mock.patch.object(
+            tracker_module,
+            "GLib",
+            self.glib,
+        ):
+            self.assertEqual(tracker_module.get_idle_time_ms(), 12_345)
+            self.assertEqual(tracker_module.get_idle_time_ms(), 12_345)
+
+        self.gio.bus_get_sync.assert_called_once()
+        self.assertEqual(connection.call_sync.call_count, 2)
+
+    def test_idle_monitor_failure_returns_zero_and_resets_connection(self):
+        connection = mock.Mock()
+        connection.call_sync.side_effect = RuntimeError("D-Bus not available")
+        self.gio.bus_get_sync.return_value = connection
+
+        with mock.patch.object(tracker_module, "Gio", self.gio), mock.patch.object(
+            tracker_module,
+            "GLib",
+            self.glib,
+        ):
+            self.assertEqual(tracker_module.get_idle_time_ms(), 0)
+
+        self.assertIsNone(tracker_module._idle_monitor_connection)
+
+
 class FakeStore:
     def __init__(self, save_result=True):
         self.save_result = save_result
@@ -98,6 +160,10 @@ class FakeStore:
 
 
 class TimeTrackerSaveIntervalTests(unittest.TestCase):
+    def test_default_intervals_reduce_wakeups_and_writes(self):
+        self.assertEqual(TICK_SECONDS, 5)
+        self.assertEqual(SAVE_INTERVAL_SECONDS, 60)
+
     def setUp(self):
         self.store = FakeStore()
         self.tracker = TimeTracker(self.store, save_interval_seconds=60)
