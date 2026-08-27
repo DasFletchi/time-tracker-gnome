@@ -19,7 +19,7 @@ AppDir:
     id: com.fletchi.TimeTrackerGnome
     name: Time Tracker
     icon: time-tracker-gnome
-    version: 1.0.1
+    version: 1.1.0
     exec: usr/bin/time-tracker-gnome
     exec_args: $@
 

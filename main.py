@@ -198,30 +198,35 @@ class TimeTrackerApp(Adw.Application):
         self.day_rows = []
         self._week_data = []
         self._last_week_refresh = 0
+        self._tracker_started = False
 
     def do_startup(self):
         Adw.Application.do_startup(self)
+
+        # Keep the process alive even when no window exists or every window is hidden.
+        # Tracking starts here, not during UI construction, so it cannot depend on a
+        # visible application window.
         self.hold()
+        self.tracker.start()
+        self._tracker_started = True
+        self.setup_autostart()
 
     def do_activate(self):
         if self.window:
             self.window.present()
             return
 
+        # Autostart launches a headless service. A later click on the launcher
+        # activates this same process and creates the window at that point.
+        if self.is_background:
+            print("Time Tracker gestartet im Hintergrund...")
+            self.is_background = False
+            return
+
         self._setup_css()
         self.window = self._build_window()
         self.add_window(self.window)
-        self.tracker.start()
-
-        # Setup autostart automatically
-        self.setup_autostart()
-
-        if not self.is_background:
-            self.window.present()
-        else:
-            print("Time Tracker gestartet im Hintergrund...")
-            # We reset this so subsequent user clicks on the application launcher will open the UI
-            self.is_background = False
+        self.window.present()
 
     def _setup_css(self):
         provider = Gtk.CssProvider()
@@ -319,8 +324,9 @@ class TimeTrackerApp(Adw.Application):
         return win
 
     def _on_close_request(self, widget):
-        # Hide window instead of destroying it so tracking keeps running in background
-        self.window.hide()
+        # Do not destroy the window or quit the held application. The tracker is
+        # independent of the UI and therefore continues after the window is closed.
+        widget.hide()
         return True
 
     def _on_quit(self, button):
@@ -383,8 +389,13 @@ X-GNOME-Autostart-enabled=true
             print(f"Fehler beim Einrichten von Autostart: {e}")
 
     def do_shutdown(self):
-        self.tracker.stop()
-        self.tracker.join(timeout=2)
+        # This is reached only for an explicit quit or a process shutdown, never
+        # merely because the application window was closed.
+        if self._tracker_started:
+            self.tracker.stop()
+            self.tracker.join(timeout=2)
+            self._tracker_started = False
+        self.release()
         Adw.Application.do_shutdown(self)
 
 

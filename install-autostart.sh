@@ -7,7 +7,7 @@ cat > "$AUTOSTART_DIR/time-tracker-gnome.desktop" <<EOF
 [Desktop Entry]
 Name=Time Tracker
 Comment=Einfache Bildschirmzeit-Tracking-App mit Wochenansicht
-Exec=$SCRIPT_DIR/run.sh
+Exec="$SCRIPT_DIR/run.sh" --background
 Icon=preferences-system-time
 Type=Application
 Terminal=false
