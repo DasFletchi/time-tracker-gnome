@@ -8,6 +8,7 @@ from store import DataStore
 AFK_THRESHOLD_MS = 120_000  # 2 minutes
 TICK_SECONDS = 1
 MAX_ELAPSED_PER_TICK = 5  # cap to handle suspend/resume gracefully
+SAVE_INTERVAL_SECONDS = 60  # reduce disk writes while limiting data loss on crashes
 
 
 def get_idle_time_ms() -> int:
@@ -35,16 +36,29 @@ def get_idle_time_ms() -> int:
 
 
 class TimeTracker(threading.Thread):
-    def __init__(self, store: DataStore, on_tick=None):
+    def __init__(
+        self,
+        store: DataStore,
+        on_tick=None,
+        save_interval_seconds: int = SAVE_INTERVAL_SECONDS,
+    ):
         super().__init__(daemon=True)
         self.store = store
         self.on_tick = on_tick
+        self.save_interval_seconds = save_interval_seconds
         self._running = True
         self.today_key = date.today().isoformat()
         self.session_seconds = 0
         self.last_tick = time.monotonic()
+        self.last_save = self.last_tick
         self.last_idle_ms = 0
         self.is_afk = False
+
+    def _save_if_due(self, now: float) -> None:
+        """Schreibt gepufferte Zeiten höchstens einmal pro Speicherintervall."""
+        if now - self.last_save >= self.save_interval_seconds:
+            if self.store.save():
+                self.last_save = now
 
     def run(self):
         while self._running:
@@ -62,6 +76,8 @@ class TimeTracker(threading.Thread):
             if not self.is_afk:
                 self.session_seconds += elapsed
                 self.store.add_seconds(self.today_key, int(elapsed))
+
+            self._save_if_due(now)
 
             # Handle day rollover
             current_key = date.today().isoformat()
@@ -85,3 +101,6 @@ class TimeTracker(threading.Thread):
 
     def stop(self):
         self._running = False
+        # A normal quit persists the most recent seconds immediately. Only an
+        # unexpected power loss can leave at most one save interval unsaved.
+        self.store.save()

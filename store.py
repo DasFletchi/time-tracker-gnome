@@ -26,6 +26,7 @@ class DataStore:
         loaded_data = self._read_file()
         self.data: Dict[str, int] = loaded_data if loaded_data is not None else {}
         self._file_signature = self._get_file_signature()
+        self._pending_seconds: Dict[str, int] = {}
 
     def _get_file_signature(self) -> Optional[Tuple[int, int]]:
         """Liefert eine Kennung für die aktuelle Dateiversion oder None."""
@@ -66,12 +67,19 @@ class DataStore:
             return None
 
     def _reload_if_changed_locked(self) -> None:
-        """Übernimmt eine von außen gespeicherte, gültige JSON-Datei."""
+        """Übernimmt eine von außen gespeicherte, gültige JSON-Datei.
+
+        Noch nicht gespeicherte Tracking-Sekunden werden danach wieder ergänzt,
+        damit eine manuelle Änderung und das laufende Tracking zusammengeführt
+        werden und keines von beiden verloren geht.
+        """
         current_signature = self._get_file_signature()
         if current_signature != self._file_signature:
             external_data = self._read_file()
             if external_data is not None:
                 self.data = external_data
+                for day_key, seconds in self._pending_seconds.items():
+                    self.data[day_key] = self.data.get(day_key, 0) + seconds
                 self._file_signature = current_signature
 
     def _save_locked(self) -> bool:
@@ -104,13 +112,27 @@ class DataStore:
             return False
 
     def add_seconds(self, day_key: str, seconds: int) -> None:
-        """Fügt Sekunden hinzu und bewahrt zuvor manuell gespeicherte Änderungen."""
+        """Puffert aktive Sekunden im Speicher bis zum nächsten Speichern."""
         if seconds <= 0:
             return
         with self._lock:
             self._reload_if_changed_locked()
-            self.data[day_key] = self.data.get(day_key, 0) + int(seconds)
-            self._save_locked()
+            seconds = int(seconds)
+            self.data[day_key] = self.data.get(day_key, 0) + seconds
+            self._pending_seconds[day_key] = (
+                self._pending_seconds.get(day_key, 0) + seconds
+            )
+
+    def save(self) -> bool:
+        """Speichert alle gepufferten Sekunden und gibt den Erfolg zurück."""
+        with self._lock:
+            self._reload_if_changed_locked()
+            if not self._pending_seconds:
+                return True
+            if self._save_locked():
+                self._pending_seconds.clear()
+                return True
+            return False
 
     def get_seconds(self, day_key: str) -> int:
         with self._lock:
